@@ -18,11 +18,7 @@ describe('validateSettings', () => {
     expect(validateSettings(DEFAULT_SETTINGS)).toEqual([])
   })
   it('flags bad values', () => {
-    const errs = validateSettings({
-      ...DEFAULT_SETTINGS,
-      dailyTargetMinutes: NaN,
-      preferredDays: [],
-    })
+    const errs = validateSettings({ ...DEFAULT_SETTINGS, dailyTargetMinutes: NaN, preferredDays: [] })
     expect(errs.length).toBe(2)
   })
 })
