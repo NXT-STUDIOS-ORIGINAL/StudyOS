@@ -1,19 +1,35 @@
 export type ThemeChoice = 'light' | 'dark' | 'system'
 
-export interface Settings {
-  id: 'main'
-  name: string
+export type Avatar =
+  | { kind: 'default'; key: string }
+  | { kind: 'image'; dataUrl: string }
+
+export interface Profile {
+  id: string
+  displayName: string
+  nickname: string
+  board: string
+  classGrade: string
   academicYear: string
-  boardClass: string
+  schoolName: string
+  avatar: Avatar
+  createdAt: number
+  lastActiveAt: number
+}
+export type ProfileDraft = Omit<Profile, 'id' | 'createdAt' | 'lastActiveAt'>
+
+export interface ProfileSettings {
+  profileId: string
   dailyTargetMinutes: number
+  weeklyTargetMinutes: number
   preferredDays: number[] // 0 = Sunday ... 6 = Saturday
-  weekStart: number // 0 = Sunday, 1 = Monday ...
+  weekStart: number
   theme: ThemeChoice
   focusMinutes: number
   shortBreakMinutes: number
   longBreakMinutes: number
-  revisionIntervals: number[] // days, strictly increasing
+  revisionIntervals: number[]
   gamification: boolean
-  onboarded: boolean
-  updatedAt: number // epoch ms
+  updatedAt: number
 }
+export type SettingsDraft = Omit<ProfileSettings, 'profileId' | 'updatedAt'>
