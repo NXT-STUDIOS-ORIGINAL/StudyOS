@@ -1,17 +1,15 @@
 import { useEffect } from 'react'
 import { HashRouter, Route, Routes } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from './lib/db'
-import { DEFAULT_SETTINGS } from './domain/settings'
-import type { Settings } from './domain/types'
+import type { ThemeChoice } from './domain/types'
+import { useProfileState } from './hooks/useProfileState'
 import { AppShell } from './components/AppShell'
 import { Dashboard } from './pages/Dashboard'
 import { SettingsPage } from './pages/SettingsPage'
+import { ProfilesPage } from './pages/Profiles'
 import { Onboarding } from './pages/Onboarding'
 import { ComingSoon } from './pages/ComingSoon'
 
-function useApplyTheme(settings: Settings | null | undefined) {
-  const theme = settings?.theme ?? 'system'
+function useApplyTheme(theme: ThemeChoice) {
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const apply = () =>
@@ -23,28 +21,26 @@ function useApplyTheme(settings: Settings | null | undefined) {
 }
 
 export default function App() {
-  // undefined = still loading, null = no settings saved yet
-  const settings = useLiveQuery(async () => (await db.settings.get('main')) ?? null, [])
-  useApplyTheme(settings)
+  const state = useProfileState() // undefined while loading
+  useApplyTheme(state?.settings?.theme ?? 'system')
 
-  if (settings === undefined) {
-    return <p role="status" className="p-8">Loading…</p>
-  }
-  if (settings === null || !settings.onboarded) {
-    return <Onboarding initial={settings ?? DEFAULT_SETTINGS} />
-  }
+  if (state === undefined) return <p role="status" className="p-8">Loading…</p>
+  const { profiles, active, settings } = state
+  if (!active || !settings) return <Onboarding />
 
   return (
     <HashRouter>
       <Routes>
-        <Route element={<AppShell />}>
-          <Route index element={<Dashboard settings={settings} />} />
+        {/* key remounts the whole shell and page on profile switch, so no state leaks between profiles */}
+        <Route element={<AppShell key={active.id} profiles={profiles} active={active} />}>
+          <Route index element={<Dashboard profile={active} settings={settings} />} />
           <Route path="syllabus" element={<ComingSoon title="Syllabus" phase={2} />} />
           <Route path="planner" element={<ComingSoon title="Planner" phase={2} />} />
           <Route path="focus" element={<ComingSoon title="Focus timer" phase={2} />} />
           <Route path="exams" element={<ComingSoon title="Exams" phase={3} />} />
           <Route path="analytics" element={<ComingSoon title="Analytics" phase={4} />} />
-          <Route path="settings" element={<SettingsPage settings={settings} />} />
+          <Route path="profiles" element={<ProfilesPage profiles={profiles} active={active} />} />
+          <Route path="settings" element={<SettingsPage profile={active} settings={settings} />} />
           <Route path="*" element={<ComingSoon title="Page not found" phase={1} />} />
         </Route>
       </Routes>
