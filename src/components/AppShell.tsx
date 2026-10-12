@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import {
   BarChart3, BookOpen, CalendarDays, GraduationCap, LayoutDashboard,
-  PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Timer,
+  PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Timer, Users,
 } from 'lucide-react'
+import type { Profile } from '../domain/types'
+import { ProfileSwitcher } from './ProfileSwitcher'
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -12,13 +14,16 @@ const NAV = [
   { to: '/focus', label: 'Focus', icon: Timer },
   { to: '/exams', label: 'Exams', icon: GraduationCap },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { to: '/profiles', label: 'Profiles', icon: Users },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
-export function AppShell() {
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem('studyos.sidebar') === 'collapsed',
-  )
+interface Props { profiles: Profile[]; active: Profile }
+
+export function AppShell({ profiles, active }: Props) {
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('studyos.sidebar') === 'collapsed' } catch { return false }
+  })
   const toggle = () => {
     const next = !collapsed
     setCollapsed(next)
@@ -44,22 +49,29 @@ export function AppShell() {
             <NavLink key={to} to={to} end={to === '/'} title={label}
               className={({ isActive }) =>
                 `flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium ${
-                  isActive
-                    ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
-                    : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                  isActive ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}>
               <Icon size={20} aria-hidden />
               {!collapsed && label}
             </NavLink>
           ))}
         </nav>
+        <div className="mt-auto border-t border-slate-200 p-2 dark:border-slate-800">
+          <ProfileSwitcher profiles={profiles} active={active} placement="up" compact={collapsed} />
+        </div>
       </aside>
 
-      <main id="main" className="min-w-0 flex-1 p-4 pb-24 md:p-8 md:pb-8">
-        <Outlet />
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 items-center justify-between border-b border-slate-200 px-4 md:hidden dark:border-slate-800">
+          <span className="text-lg font-semibold">StudyOS</span>
+          <ProfileSwitcher profiles={profiles} active={active} placement="down" compact />
+        </header>
+        <main id="main" className="flex-1 p-4 pb-24 md:p-8 md:pb-8">
+          <Outlet />
+        </main>
+      </div>
 
-      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 flex overflow-x-auto border-t border-slate-200 bg-white md:hidden dark:border-slate-800 dark:bg-slate-900">
+      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-slate-200 bg-white md:hidden dark:border-slate-800 dark:bg-slate-900">
         {NAV.map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} end={to === '/'}
             className={({ isActive }) =>
