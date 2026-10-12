@@ -1,11 +1,8 @@
-import type { Settings } from './types'
+import type { ProfileSettings, SettingsDraft } from './types'
 
-export const DEFAULT_SETTINGS: Settings = {
-  id: 'main',
-  name: '',
-  academicYear: '',
-  boardClass: '',
+export const DEFAULT_SETTINGS: SettingsDraft = {
   dailyTargetMinutes: 180,
+  weeklyTargetMinutes: 1080,
   preferredDays: [1, 2, 3, 4, 5, 6],
   weekStart: 1,
   theme: 'system',
@@ -14,8 +11,21 @@ export const DEFAULT_SETTINGS: Settings = {
   longBreakMinutes: 15,
   revisionIntervals: [1, 3, 7, 14, 30],
   gamification: false,
-  onboarded: false,
-  updatedAt: 0,
+}
+
+export function toSettingsDraft(s: ProfileSettings): SettingsDraft {
+  return {
+    dailyTargetMinutes: s.dailyTargetMinutes,
+    weeklyTargetMinutes: s.weeklyTargetMinutes,
+    preferredDays: s.preferredDays,
+    weekStart: s.weekStart,
+    theme: s.theme,
+    focusMinutes: s.focusMinutes,
+    shortBreakMinutes: s.shortBreakMinutes,
+    longBreakMinutes: s.longBreakMinutes,
+    revisionIntervals: s.revisionIntervals,
+    gamification: s.gamification,
+  }
 }
 
 /** Parses "1, 3, 7" into [1, 3, 7]. Returns null if invalid. */
@@ -30,21 +40,19 @@ export function parseIntervals(text: string): number[] | null {
   return nums
 }
 
-export function validateSettings(s: Settings): string[] {
+export function validateSettings(s: SettingsDraft): string[] {
   const errors: string[] = []
   const inRange = (n: number, min: number, max: number) =>
     Number.isFinite(n) && n >= min && n <= max
   if (!inRange(s.dailyTargetMinutes, 15, 1440))
     errors.push('Daily study target must be between 0.25 and 24 hours.')
-  if (!inRange(s.focusMinutes, 1, 240))
-    errors.push('Focus session must be 1 to 240 minutes.')
-  if (!inRange(s.shortBreakMinutes, 1, 60))
-    errors.push('Short break must be 1 to 60 minutes.')
-  if (!inRange(s.longBreakMinutes, 1, 120))
-    errors.push('Long break must be 1 to 120 minutes.')
+  if (!inRange(s.weeklyTargetMinutes, 15, 10080))
+    errors.push('Weekly study target must be between 0.25 and 168 hours.')
+  if (!inRange(s.focusMinutes, 1, 240)) errors.push('Focus session must be 1 to 240 minutes.')
+  if (!inRange(s.shortBreakMinutes, 1, 60)) errors.push('Short break must be 1 to 60 minutes.')
+  if (!inRange(s.longBreakMinutes, 1, 120)) errors.push('Long break must be 1 to 120 minutes.')
   if (s.revisionIntervals.length === 0)
     errors.push('Revision intervals must be whole days, increasing, e.g. 1, 3, 7, 14, 30.')
-  if (s.preferredDays.length === 0)
-    errors.push('Select at least one study day.')
+  if (s.preferredDays.length === 0) errors.push('Select at least one study day.')
   return errors
 }
