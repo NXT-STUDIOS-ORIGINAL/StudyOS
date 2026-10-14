@@ -8,6 +8,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { ProfilesPage } from './pages/Profiles'
 import { Onboarding } from './pages/Onboarding'
 import { ComingSoon } from './pages/ComingSoon'
+import { BackupPage } from './pages/BackupPage'
 
 function useApplyTheme(theme: ThemeChoice) {
   useEffect(() => {
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="exams" element={<ComingSoon title="Exams" phase={3} />} />
           <Route path="analytics" element={<ComingSoon title="Analytics" phase={4} />} />
           <Route path="profiles" element={<ProfilesPage profiles={profiles} active={active} />} />
+          <Route path="backup" element={<BackupPage profiles={profiles} active={active} />} />
           <Route path="settings" element={<SettingsPage profile={active} settings={settings} />} />
           <Route path="*" element={<ComingSoon title="Page not found" phase={1} />} />
         </Route>
