@@ -1,3 +1,4 @@
+import type { IndexableType } from 'dexie'
 import { format } from 'date-fns'
 import { ACTIVE_KEY, db } from './db'
 import { setLastBackupNow } from './backupState'
@@ -80,7 +81,7 @@ async function importRows(
         report.rowsAdded++
         continue
       }
-      const key = incoming[spec.pk]
+      const key = incoming[spec.pk] as IndexableType
       const existing = (await table.get(key)) as Row | undefined
       if (!existing) {
         await table.add(incoming)
