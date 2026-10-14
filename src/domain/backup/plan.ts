@@ -88,4 +88,4 @@ export function resolveConflict(existing: Row, incoming: Row, policy: ConflictPo
     if (typeof a === 'number' && typeof b === 'number' && b > a) return 'use-backup'
   }
   return 'keep'
-        }
+}
