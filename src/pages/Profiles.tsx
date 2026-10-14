@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import type { Profile } from '../domain/types'
 import { toProfileDraft, emptyProfileDraft } from '../domain/profile'
 import { createProfile, deleteProfile, updateProfile } from '../lib/db'
+import { exportAndDownload } from '../lib/backup'
 import { Avatar } from '../components/Avatar'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ProfileForm } from '../components/ProfileForm'
@@ -18,6 +19,18 @@ export function ProfilesPage({ profiles, active }: { profiles: Profile[]; active
   const [busy, setBusy] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const { request, dialog, error } = useProfileSwitch()
+  const [exportMsg, setExportMsg] = useState<{ id: string; text: string } | null>(null)
+
+  async function backupFirst() {
+    if (!toDelete) return
+    const id = toDelete.id
+    try {
+      const r = await exportAndDownload({ kind: 'profile', id })
+      setExportMsg({ id, text: `Backup downloaded: ${r.fileName}. Check that it saved before deleting.` })
+    } catch (e) {
+      setExportMsg({ id, text: e instanceof Error ? e.message : 'Backup failed.' })
+    }
+  }
 
   if (mode.kind === 'create') {
     return (
@@ -108,7 +121,8 @@ export function ProfilesPage({ profiles, active }: { profiles: Profile[]; active
           exams, tests, revisions, notes and mistakes.</p>
         <p>Other profiles are not affected. This cannot be undone.</p>
         {profiles.length === 1 && <p>This is your only profile, so you will return to the welcome screen.</p>}
-        <p>Backup export is added in the next step. Until then there is no way to save a copy first.</p>
+        <button type="button" className={secondaryBtn} onClick={backupFirst}>Download a backup of this profile first</button>
+        {exportMsg && exportMsg.id === toDelete?.id && <p role="status">{exportMsg.text}</p>}
       </ConfirmDialog>
       {dialog}
     </div>
