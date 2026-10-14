@@ -5,8 +5,7 @@ import { legacyToProfile, type LegacySettings } from '../domain/migration'
 
 export interface AppStateRow { key: string; value: string }
 
-const ACTIVE_KEY = 'activeProfileId'
-
+export const ACTIVE_KEY = 'activeProfileId'
 /**
  * Every table that stores per-profile records MUST be listed here and carry an
  * indexed `profileId` field. deleteProfile (and later backup/restore) use this list.
