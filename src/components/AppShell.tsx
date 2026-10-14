@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import {
-  BarChart3, BookOpen, CalendarDays, GraduationCap, LayoutDashboard,
+  BarChart3, BookOpen, CalendarDays, Download, GraduationCap, LayoutDashboard,
   PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Timer, Users,
 } from 'lucide-react'
 import type { Profile } from '../domain/types'
+import { BackupReminder } from './BackupReminder'
 import { ProfileSwitcher } from './ProfileSwitcher'
 
 const NAV = [
@@ -14,6 +15,7 @@ const NAV = [
   { to: '/focus', label: 'Focus', icon: Timer },
   { to: '/exams', label: 'Exams', icon: GraduationCap },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { to: '/backup', label: 'Backup', icon: Download },
   { to: '/profiles', label: 'Profiles', icon: Users },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
@@ -67,6 +69,7 @@ export function AppShell({ profiles, active }: Props) {
           <ProfileSwitcher profiles={profiles} active={active} placement="down" compact />
         </header>
         <main id="main" className="flex-1 p-4 pb-24 md:p-8 md:pb-8">
+          <BackupReminder />
           <Outlet />
         </main>
       </div>
