@@ -1,22 +1,28 @@
 import Dexie, { type Table } from 'dexie'
 import type { Profile, ProfileDraft, ProfileSettings, SettingsDraft } from '../domain/types'
+import type { Chapter, Subject, Topic } from '../domain/syllabus/types'
 import { DEFAULT_SETTINGS } from '../domain/settings'
 import { legacyToProfile, type LegacySettings } from '../domain/migration'
 
 export interface AppStateRow { key: string; value: string }
 
 export const ACTIVE_KEY = 'activeProfileId'
+
 /**
- * Every table that stores per-profile records MUST be listed here and carry an
- * indexed `profileId` field. deleteProfile (and later backup/restore) use this list.
+ * Every table that stores per-profile records MUST be listed here, carry an indexed
+ * `profileId`, and have a matching entry (same order) in BACKUP_TABLES.
+ * Parents come before children.
  */
-export const PROFILE_OWNED_TABLES = ['profileSettings'] as const
+export const PROFILE_OWNED_TABLES = ['profileSettings', 'subjects', 'chapters', 'topics'] as const
 
 export class StudyOSDB extends Dexie {
   settings!: Table<LegacySettings, string> // legacy (v1), kept untouched for safety
   profiles!: Table<Profile, string>
   profileSettings!: Table<ProfileSettings, string>
   appState!: Table<AppStateRow, string>
+  subjects!: Table<Subject, string>
+  chapters!: Table<Chapter, string>
+  topics!: Table<Topic, string>
 
   constructor() {
     super('studyos')
@@ -36,6 +42,12 @@ export class StudyOSDB extends Dexie {
         await tx.table('profileSettings').add(migrated.settings)
         await tx.table('appState').put({ key: ACTIVE_KEY, value: migrated.profile.id })
       })
+    // v3: syllabus tables (additive, no data changes)
+    this.version(3).stores({
+      subjects: 'id, profileId',
+      chapters: 'id, profileId, subjectId',
+      topics: 'id, profileId, chapterId',
+    })
   }
 }
 
