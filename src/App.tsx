@@ -9,6 +9,7 @@ import { ProfilesPage } from './pages/Profiles'
 import { Onboarding } from './pages/Onboarding'
 import { ComingSoon } from './pages/ComingSoon'
 import { BackupPage } from './pages/BackupPage'
+import { SyllabusPage } from './pages/Syllabus'
 
 function useApplyTheme(theme: ThemeChoice) {
   useEffect(() => {
@@ -35,7 +36,7 @@ export default function App() {
         {/* key remounts the whole shell and page on profile switch, so no state leaks between profiles */}
         <Route element={<AppShell key={active.id} profiles={profiles} active={active} />}>
           <Route index element={<Dashboard profile={active} settings={settings} />} />
-          <Route path="syllabus" element={<ComingSoon title="Syllabus" phase={2} />} />
+          <Route path="syllabus" element={<SyllabusPage profile={active} />} />
           <Route path="planner" element={<ComingSoon title="Planner" phase={2} />} />
           <Route path="focus" element={<ComingSoon title="Focus timer" phase={2} />} />
           <Route path="exams" element={<ComingSoon title="Exams" phase={3} />} />
