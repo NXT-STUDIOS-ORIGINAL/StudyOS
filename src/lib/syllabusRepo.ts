@@ -11,12 +11,16 @@ import type {
 export type SyllabusKind = 'subject' | 'chapter' | 'topic'
 
 function rw<T>(fn: () => Promise<T>): Promise<T> {
-  return db.transaction('rw', db.profiles, db.subjects, db.chapters, db.topics, fn)
+  return db.transaction(
+    'rw',
+    [db.profiles, db.subjects, db.chapters, db.topics, db.activityTypes, db.activityRecords],
+    fn,
+  )
 }
 function check(errors: string[]): void {
   if (errors.length > 0) throw new Error(errors.join(' '))
 }
-const maxOrder = (xs: { order: number }[]) => xs.reduce((m, x) => Math.max(m, x.order), -1)
+export const maxOrder = (xs: { order: number }[]) => xs.reduce((m, x) => Math.max(m, x.order), -1)
 const dupMsg = (what: string, name: string) => `A ${what} named “${name.trim()}” already exists here.`
 
 async function ownedSubject(profileId: string, id: string): Promise<Subject> {
@@ -49,6 +53,13 @@ export async function createSubject(profileId: string, draft: SubjectDraft): Pro
       id, profileId, name: draft.name.trim(), color: draft.color,
       order: maxOrder(siblings) + 1, createdAt: t, updatedAt: t,
     })
+    // The new subject starts with a copy of the profile's default activity set.
+    const template = await db.activityTypes.where('profileId').equals(profileId).filter((a) => a.subjectId === null).toArray()
+    if (template.length > 0) {
+      await db.activityTypes.bulkAdd(
+        template.map((a) => ({ ...a, id: crypto.randomUUID(), subjectId: id, createdAt: t, updatedAt: t })),
+      )
+    }
     return id
   })
 }
@@ -67,8 +78,10 @@ export async function deleteSubject(profileId: string, id: string): Promise<void
   await rw(async () => {
     await ownedSubject(profileId, id)
     const chapterIds = await db.chapters.where('subjectId').equals(id).primaryKeys()
+    await db.activityRecords.where('chapterId').anyOf(chapterIds).delete()
     await db.topics.where('chapterId').anyOf(chapterIds).delete()
     await db.chapters.bulkDelete(chapterIds)
+    await db.activityTypes.where('subjectId').equals(id).delete()
     await db.subjects.delete(id)
   })
 }
@@ -108,6 +121,7 @@ export async function updateChapter(profileId: string, id: string, draft: Chapte
 export async function deleteChapter(profileId: string, id: string): Promise<void> {
   await rw(async () => {
     await ownedChapter(profileId, id)
+    await db.activityRecords.where('chapterId').equals(id).delete()
     await db.topics.where('chapterId').equals(id).delete()
     await db.chapters.delete(id)
   })
@@ -199,7 +213,7 @@ export async function bulkAddTopics(
 
 /* ---------- reordering ---------- */
 
-async function reorder<T extends { id: string; order: number; createdAt: number }>(
+export async function reorder<T extends { id: string; order: number; createdAt: number }>(
   table: Table<T, string>, siblings: T[], id: string, dir: -1 | 1,
 ): Promise<void> {
   const sorted = [...siblings].sort((a, b) => a.order - b.order || a.createdAt - b.createdAt)
@@ -223,4 +237,4 @@ export async function moveItem(profileId: string, kind: SyllabusKind, id: string
       await reorder(db.topics, await db.topics.where('chapterId').equals(t.chapterId).toArray(), id, dir)
     }
   })
-                              }
+}
