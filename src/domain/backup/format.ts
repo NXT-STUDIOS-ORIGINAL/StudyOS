@@ -1,6 +1,7 @@
 import type { Avatar, Profile } from '../types'
 import { toProfileDraft, validateProfileDraft } from '../profile'
 import { validateSettings } from '../settings'
+import { validateChapterRecord, validateSubjectRecord, validateTopicRecord } from '../syllabus/validate'
 
 export const BACKUP_FORMAT = 'studyos-backup'
 export const BACKUP_SCHEMA_VERSION = 1
@@ -51,6 +52,8 @@ export interface BackupTableSpec {
   name: string
   pk: string
   label: string // singular, used in counts
+  /** Foreign keys to other tables of the same profile (parents must be listed earlier). */
+  refs: { field: string; table: string }[]
   validateRow: (row: unknown, ownerId: string) => string[]
 }
 
@@ -84,10 +87,13 @@ function validateSettingsRow(row: unknown, ownerId: string): string[] {
     gamification: row.gamification as boolean,
   })
 }
-
 export const BACKUP_TABLES: BackupTableSpec[] = [
-  { name: 'profileSettings', pk: 'profileId', label: 'settings record', validateRow: validateSettingsRow },
+  { name: 'profileSettings', pk: 'profileId', label: 'settings record', refs: [], validateRow: validateSettingsRow },
+  { name: 'subjects', pk: 'id', label: 'subject', refs: [], validateRow: validateSubjectRecord },
+  { name: 'chapters', pk: 'id', label: 'chapter', refs: [{ field: 'subjectId', table: 'subjects' }], validateRow: validateChapterRecord },
+  { name: 'topics', pk: 'id', label: 'topic', refs: [{ field: 'chapterId', table: 'chapters' }], validateRow: validateTopicRecord },
 ]
+
 
 function parseProfile(p: unknown): { profile: Profile | null; errors: string[] } {
   if (!isRecord(p)) return { profile: null, errors: ['profile details are missing'] }
@@ -184,6 +190,16 @@ export function validateBackup(raw: unknown): BackupValidation {
         valid.push(rec)
       })
       tables[spec.name] = valid
+    }
+    for (const spec of BACKUP_TABLES) {
+      for (const ref of spec.refs) {
+        const known = new Set((tables[ref.table] ?? []).map((r) => String(r.id)))
+        for (const row of tables[spec.name] ?? []) {
+          if (!known.has(String(row[ref.field]))) {
+            add(`"${name}": a ${spec.label} refers to a missing record in ${ref.table} (${String(row[ref.field])}).`)
+          }
+        }
+      }
     }
     entries.push({ profile, tables })
   })
