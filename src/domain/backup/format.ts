@@ -55,6 +55,8 @@ export interface BackupTableSpec {
   label: string // singular, used in counts
   /** Foreign keys to other tables of the same profile (parents must be listed earlier). */
   refs: { field: string; table: string }[]
+  /** Fields that together must be unique within one profile (checked on import). */
+  unique?: string[]
   validateRow: (row: unknown, ownerId: string) => string[]
 }
 
@@ -91,8 +93,14 @@ function validateSettingsRow(row: unknown, ownerId: string): string[] {
 export const BACKUP_TABLES: BackupTableSpec[] = [
   { name: 'profileSettings', pk: 'profileId', label: 'settings record', refs: [], validateRow: validateSettingsRow },
   { name: 'subjects', pk: 'id', label: 'subject', refs: [], validateRow: validateSubjectRecord },
+  { name: 'activityTypes', pk: 'id', label: 'activity type', refs: [{ field: 'subjectId', table: 'subjects' }], validateRow: validateActivityTypeRecord },
   { name: 'chapters', pk: 'id', label: 'chapter', refs: [{ field: 'subjectId', table: 'subjects' }], validateRow: validateChapterRecord },
   { name: 'topics', pk: 'id', label: 'topic', refs: [{ field: 'chapterId', table: 'chapters' }], validateRow: validateTopicRecord },
+  {
+    name: 'activityRecords', pk: 'id', label: 'activity record',
+    refs: [{ field: 'chapterId', table: 'chapters' }, { field: 'activityTypeId', table: 'activityTypes' }],
+    unique: ['chapterId', 'activityTypeId'], validateRow: validateActivityRecord,
+  },
 ]
 
 
@@ -188,6 +196,11 @@ export function validateBackup(raw: unknown): BackupValidation {
         const key = `${spec.name}:${String(rec[spec.pk])}`
         if (seenRows.has(key)) { add(`Duplicate record ID in the file (${key}).`); return }
         seenRows.add(key)
+        if (spec.unique) {
+          const comp = `${spec.name}:${profile.id}:${spec.unique.map((f) => String(rec[f])).join('|')}`
+          if (seenRows.has(comp)) { add(`Duplicate ${spec.label} for the same item in "${name}".`); return }
+          seenRows.add(comp)
+        }
         valid.push(rec)
       })
       tables[spec.name] = valid
@@ -196,7 +209,7 @@ export function validateBackup(raw: unknown): BackupValidation {
       for (const ref of spec.refs) {
         const known = new Set((tables[ref.table] ?? []).map((r) => String(r.id)))
         for (const row of tables[spec.name] ?? []) {
-          if (!known.has(String(row[ref.field]))) {
+          if (row[ref.field] !== null && !known.has(String(row[ref.field]))) {
             add(`"${name}": a ${spec.label} refers to a missing record in ${ref.table} (${String(row[ref.field])}).`)
           }
         }
