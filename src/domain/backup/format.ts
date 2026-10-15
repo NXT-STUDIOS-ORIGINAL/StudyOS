@@ -2,6 +2,7 @@ import type { Avatar, Profile } from '../types'
 import { toProfileDraft, validateProfileDraft } from '../profile'
 import { validateSettings } from '../settings'
 import { validateChapterRecord, validateSubjectRecord, validateTopicRecord } from '../syllabus/validate'
+import { validateActivityRecord, validateActivityTypeRecord } from '../activity/validate'
 
 export const BACKUP_FORMAT = 'studyos-backup'
 export const BACKUP_SCHEMA_VERSION = 1
