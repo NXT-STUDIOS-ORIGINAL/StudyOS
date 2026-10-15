@@ -68,19 +68,41 @@ export async function exportAndDownload(scope: ExportScope): Promise<ExportResul
   return { fileName, sizeBytes: new Blob([json]).size, summary: summarizeBackup(backup) }
 }
 
+/**
+ * mode "add": rows are new for this profile. A row whose ID already exists anywhere on this
+ *   device gets a fresh ID, and rows that reference it are re-pointed (parents are processed first).
+ * mode "merge": rows are matched by stable ID and resolved by the conflict policy.
+ */
 async function importRows(
   entry: BackupProfileEntry, targetId: string, mode: 'add' | 'merge',
   policy: ConflictPolicy, report: RestoreReport,
 ): Promise<void> {
+  const idMap = new Map<string, Map<string, string>>()
   for (const spec of BACKUP_TABLES) {
     const table = db.table(spec.name)
+    const remaps = new Map<string, string>()
+    idMap.set(spec.name, remaps)
     for (const row of entry.tables[spec.name] ?? []) {
       const incoming: Row = { ...row, profileId: targetId }
+
       if (mode === 'add') {
+        for (const ref of spec.refs) {
+          const mapped = idMap.get(ref.table)?.get(String(incoming[ref.field]))
+          if (mapped) incoming[ref.field] = mapped
+        }
+        if (spec.pk !== 'profileId') {
+          const oldId = String(incoming[spec.pk])
+          if (await table.get(incoming[spec.pk] as IndexableType)) {
+            const fresh = crypto.randomUUID()
+            remaps.set(oldId, fresh)
+            incoming[spec.pk] = fresh
+          }
+        }
         await table.add(incoming)
         report.rowsAdded++
         continue
       }
+
       const key = incoming[spec.pk] as IndexableType
       const existing = (await table.get(key)) as Row | undefined
       if (!existing) {
@@ -159,4 +181,4 @@ export async function restoreBackup(
     }
     return report
   })
-}
+  }
