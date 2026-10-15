@@ -101,18 +101,17 @@ export function TopicForm({ initial, submitLabel, onSave, onCancel }: FormProps<
   const [name, setName] = useState(initial.name)
   const [status, setStatus] = useState<TopicStatus>(initial.status)
   const [percent, setPercent] = useState(String(initial.contentPercent))
-  const [practised, setPractised] = useState(initial.practised)
-  const [revised, setRevised] = useState(initial.revised)
   const [difficulty, setDifficulty] = useState(initial.difficulty === null ? '' : String(initial.difficulty))
   const [importance, setImportance] = useState(initial.importance === null ? '' : String(initial.importance))
   const [minutes, setMinutes] = useState(initial.estimatedMinutes === null ? '' : String(initial.estimatedMinutes))
   const [notes, setNotes] = useState(initial.notes)
   const { busy, error, run } = useSubmit()
 
+  // practised / revised are legacy fields: kept as stored, no longer edited here (activities replace them).
   const submit = () => void run(() => onSave({
     name: name.trim(), status,
     contentPercent: percent.trim() === '' ? NaN : Number(percent),
-    practised, revised,
+    practised: initial.practised, revised: initial.revised,
     difficulty: optNumber(difficulty), importance: optNumber(importance),
     estimatedMinutes: optNumber(minutes), notes,
   }))
@@ -129,18 +128,9 @@ export function TopicForm({ initial, submitLabel, onSave, onCancel }: FormProps<
         <label className="block text-sm font-medium">Content studied (%)
           <input className={fieldCls} inputMode="numeric" value={percent} onChange={(e) => setPercent(e.target.value)} /></label>
       </div>
-      <fieldset>
-        <legend className="text-sm font-medium">Completion, tracked separately</legend>
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <input type="checkbox" className="h-5 w-5" checked={practised} onChange={(e) => setPractised(e.target.checked)} />
-          Questions practised</label>
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <input type="checkbox" className="h-5 w-5" checked={revised} onChange={(e) => setRevised(e.target.checked)} />
-          Revision completed</label>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Mastery is shown only from test results (added with the test system). Reading a topic never counts as mastery.
-        </p>
-      </fieldset>
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        Practice, revision, tests and the rest are tracked per chapter as activities, so nothing is counted twice.
+      </p>
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="block text-sm font-medium">Difficulty
           <select className={fieldCls} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
@@ -189,4 +179,4 @@ export function BulkTopicsForm({ onSave, onClose }: {
       <Footer busy={busy} error={error} submitLabel="Add topics" onCancel={onClose} />
     </Form>
   )
-    }
+}
