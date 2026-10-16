@@ -17,6 +17,7 @@ export interface Subject {
   profileId: string
   name: string
   color: string
+  pinned?: boolean // missing = false
   order: number
   createdAt: number
   updatedAt: number
@@ -31,6 +32,7 @@ export interface Chapter {
   weight: number | null // custom importance weight; null = unknown (counts as 1)
   estimatedMinutes: number | null
   targetDate: string | null // yyyy-MM-dd
+  pinned?: boolean // missing = false
   notes: string
   createdAt: number
   updatedAt: number
