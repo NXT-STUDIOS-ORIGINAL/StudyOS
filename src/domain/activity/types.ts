@@ -20,6 +20,7 @@ export interface ActivityType {
   enabled: boolean
   weight: number | null // null counts as 1
   role: ActivityRole
+  showInCompact?: boolean // one-tap chip on the chapter card; missing = true
   createdAt: number
   updatedAt: number
 }
@@ -43,6 +44,6 @@ export interface ActivityRecord {
   updatedAt: number
 }
 
-export type ActivityTypeDraft = Pick<ActivityType, 'name' | 'enabled' | 'weight' | 'role'>
+export type ActivityTypeDraft = Pick<ActivityType, 'name' | 'enabled' | 'weight' | 'role' | 'showInCompact'>
 
 export const recordId = (chapterId: string, activityTypeId: string): string => `${chapterId}:${activityTypeId}`
