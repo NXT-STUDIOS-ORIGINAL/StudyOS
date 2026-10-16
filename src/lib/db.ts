@@ -2,10 +2,11 @@ import Dexie, { type Table } from 'dexie'
 import type { Profile, ProfileDraft, ProfileSettings, SettingsDraft } from '../domain/types'
 import type { Chapter, Subject, Topic } from '../domain/syllabus/types'
 import type { ActivityRecord, ActivityType } from '../domain/activity/types'
+import type { TrackerPrefs } from '../domain/tracker/tracker'
 import { buildActivityTypes } from '../domain/activity/defaults'
 import { DEFAULT_SETTINGS } from '../domain/settings'
 import { legacyToProfile, type LegacySettings } from '../domain/migration'
-import { migrateToActivities } from './migrations'
+import { migrateCompactDefaults, migrateToActivities } from './migrations'
 
 export interface AppStateRow { key: string; value: string }
 
@@ -17,7 +18,7 @@ export const ACTIVE_KEY = 'activeProfileId'
  * Parents come before children.
  */
 export const PROFILE_OWNED_TABLES = [
-  'profileSettings', 'subjects', 'activityTypes', 'chapters', 'topics', 'activityRecords',
+  'profileSettings', 'subjects', 'activityTypes', 'chapters', 'topics', 'activityRecords', 'trackerPrefs',
 ] as const
 
 export class StudyOSDB extends Dexie {
@@ -30,6 +31,7 @@ export class StudyOSDB extends Dexie {
   topics!: Table<Topic, string>
   activityTypes!: Table<ActivityType, string>
   activityRecords!: Table<ActivityRecord, string>
+  trackerPrefs!: Table<TrackerPrefs, string>
 
   constructor() {
     super('studyos')
@@ -60,6 +62,9 @@ export class StudyOSDB extends Dexie {
         activityRecords: 'id, profileId, chapterId, activityTypeId, [chapterId+activityTypeId]',
       })
       .upgrade(migrateToActivities)
+    this.version(5)
+      .stores({ trackerPrefs: 'profileId' })
+      .upgrade(migrateCompactDefaults)
   }
 }
 
