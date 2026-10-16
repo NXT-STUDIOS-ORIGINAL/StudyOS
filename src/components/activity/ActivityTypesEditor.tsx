@@ -27,10 +27,13 @@ function TypeForm({ initial, submitLabel, onSave, onCancel }: {
   const [weight, setWeight] = useState(initial.weight === null ? '' : String(initial.weight))
   const [role, setRole] = useState<ActivityRole>(initial.role)
   const [enabled, setEnabled] = useState(initial.enabled)
+  const [onCard, setOnCard] = useState(initial.showInCompact ?? true)
   const { busy, error, run } = useSubmit()
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    void run(() => onSave({ name: name.trim(), weight: weight.trim() === '' ? null : Number(weight), role, enabled }))
+    void run(() => onSave({
+      name: name.trim(), weight: weight.trim() === '' ? null : Number(weight), role, enabled, showInCompact: onCard,
+    }))
   }
   return (
     <form noValidate className="space-y-4" onSubmit={submit}>
@@ -51,8 +54,12 @@ function TypeForm({ initial, submitLabel, onSave, onCancel }: {
         </span>
       </label>
       <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
+        <input type="checkbox" className="h-5 w-5" checked={onCard} onChange={(e) => setOnCard(e.target.checked)} />
+        Show as a one-tap chip on the chapter card
+      </label>
+      <label className="flex min-h-11 items-center gap-3 text-sm font-medium">
         <input type="checkbox" className="h-5 w-5" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-        Enabled (shown on chapters)
+        Active (untick to archive: hidden everywhere, history kept)
       </label>
       {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
       <div className="flex flex-wrap justify-end gap-2">
@@ -81,8 +88,8 @@ export function ActivityTypesEditor({ profileId, scope, types, recordCounts, cop
     const edit = mode.edit
     return (
       <TypeForm
-        initial={edit ? { name: edit.name, enabled: edit.enabled, weight: edit.weight, role: edit.role }
-          : { name: '', enabled: true, weight: null, role: 'practice' }}
+        initial={edit ? { name: edit.name, enabled: edit.enabled, weight: edit.weight, role: edit.role, showInCompact: edit.showInCompact ?? true }
+          : { name: '', enabled: true, weight: null, role: 'practice', showInCompact: true }}
         submitLabel={edit ? 'Save' : 'Add activity'}
         onCancel={() => setMode(null)}
         onSave={async (d) => {
@@ -102,7 +109,7 @@ export function ActivityTypesEditor({ profileId, scope, types, recordCounts, cop
       <p className="text-sm text-slate-600 dark:text-slate-400">
         {scope === null
           ? 'This default set is copied into each new subject. Changing it does not alter existing subjects.'
-          : 'These activities appear on every chapter of this subject. Nothing is required: remove or disable any you do not use.'}
+          : 'These activities appear on every chapter of this subject. Nothing is required: archive or hide any you do not use.'}
       </p>
       {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
       {types.length === 0 && <p className="text-sm">No activities yet. Add one below.</p>}
@@ -111,11 +118,12 @@ export function ActivityTypesEditor({ profileId, scope, types, recordCounts, cop
           <li key={t.id} className="flex flex-wrap items-center gap-1 py-1">
             <label className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-sm">
               <input type="checkbox" className="h-5 w-5" checked={t.enabled}
-                aria-label={`${t.name} enabled`} onChange={() => void toggle(t)} />
+                aria-label={`${t.name} active`} onChange={() => void toggle(t)} />
               <span className={t.enabled ? '' : 'text-slate-400 line-through'}>
                 {t.name}
                 <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
                   {ROLE_LABELS[t.role]}{t.weight !== null && ` · weight ${t.weight}`}
+                  {t.enabled && (t.showInCompact === false ? ' · in details only' : ' · on card')}
                 </span>
               </span>
             </label>
@@ -158,7 +166,7 @@ export function ActivityTypesEditor({ profileId, scope, types, recordCounts, cop
 
       <div className="flex justify-end"><button type="button" className={primaryBtn} onClick={onClose}>Done</button></div>
 
-      <ConfirmDialog open={toDelete !== null} title={`Delete “${toDelete?.name ?? ''}”?`}
+      <ConfirmDialog open={toDelete !== null} title={`Delete “${toDelete?.name ?? ''}” permanently?`}
         confirmLabel="Delete permanently" danger busy={busy}
         onCancel={() => setToDelete(null)}
         onConfirm={async () => {
@@ -173,8 +181,8 @@ export function ActivityTypesEditor({ profileId, scope, types, recordCounts, cop
             ? ` and permanently deletes its ${recordCounts.get(toDelete?.id ?? '')} recorded entr${recordCounts.get(toDelete?.id ?? '') === 1 ? 'y' : 'ies'} (ticks, dates, history).`
             : '.'}
         </p>
-        <p>To hide it but keep its history, untick “Enabled” instead.</p>
+        <p>To hide it but keep its history, untick “Active” instead (archive).</p>
       </ConfirmDialog>
     </div>
   )
-      }
+                                             }
