@@ -23,6 +23,7 @@ export function validateActivityTypeRecord(row: unknown, ownerId: string): strin
   if (typeof row.enabled !== 'boolean') e.push('enabled must be true or false')
   if (!(row.weight === null || (isNum(row.weight) && row.weight > 0 && row.weight <= 100))) e.push('weight must be above 0 or null')
   if (!isStr(row.role) || !(ACTIVITY_ROLES as string[]).includes(row.role)) e.push('role is not recognised')
+  if (!(row.showInCompact === undefined || typeof row.showInCompact === 'boolean')) e.push('showInCompact must be true or false')
   return e
 }
 
