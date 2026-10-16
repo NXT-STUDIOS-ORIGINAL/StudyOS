@@ -3,6 +3,7 @@ import { toProfileDraft, validateProfileDraft } from '../profile'
 import { validateSettings } from '../settings'
 import { validateChapterRecord, validateSubjectRecord, validateTopicRecord } from '../syllabus/validate'
 import { validateActivityRecord, validateActivityTypeRecord } from '../activity/validate'
+import { validateTrackerPrefsRecord } from '../tracker/tracker'
 
 export const BACKUP_FORMAT = 'studyos-backup'
 export const BACKUP_SCHEMA_VERSION = 1
@@ -54,7 +55,7 @@ export interface BackupTableSpec {
   pk: string
   label: string // singular, used in counts
   /** Foreign keys to other tables of the same profile (parents must be listed earlier). */
-  refs: { field: string; table: string }[]
+  refs: { field: string; table: string; soft?: boolean }[]
   /** Fields that together must be unique within one profile (checked on import). */
   unique?: string[]
   validateRow: (row: unknown, ownerId: string) => string[]
@@ -99,7 +100,13 @@ export const BACKUP_TABLES: BackupTableSpec[] = [
   {
     name: 'activityRecords', pk: 'id', label: 'activity record',
     refs: [{ field: 'chapterId', table: 'chapters' }, { field: 'activityTypeId', table: 'activityTypes' }],
-    unique: ['chapterId', 'activityTypeId'], validateRow: validateActivityRecord,
+        unique: ['chapterId', 'activityTypeId'], validateRow: validateActivityRecord,
+  },
+  {
+    // "Soft" refs: a remembered subject that was deleted later must not make a backup invalid.
+    name: 'trackerPrefs', pk: 'profileId', label: 'tracker preference',
+    refs: [{ field: 'defaultSubjectId', table: 'subjects', soft: true }, { field: 'lastSubjectId', table: 'subjects', soft: true }],
+    validateRow: validateTrackerPrefsRecord,
   },
 ]
 
@@ -209,7 +216,7 @@ export function validateBackup(raw: unknown): BackupValidation {
       for (const ref of spec.refs) {
         const known = new Set((tables[ref.table] ?? []).map((r) => String(r.id)))
         for (const row of tables[spec.name] ?? []) {
-          if (row[ref.field] !== null && !known.has(String(row[ref.field]))) {
+          if (!ref.soft && row[ref.field] !== null && !known.has(String(row[ref.field]))) {
             add(`"${name}": a ${spec.label} refers to a missing record in ${ref.table} (${String(row[ref.field])}).`)
           }
         }
