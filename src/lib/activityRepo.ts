@@ -52,7 +52,8 @@ export async function createActivityType(
     const t = Date.now()
     await db.activityTypes.add({
       id, profileId, subjectId, name: draft.name.trim(), order: maxOrder(siblings) + 1,
-      enabled: draft.enabled, weight: draft.weight, role: draft.role, createdAt: t, updatedAt: t,
+      enabled: draft.enabled, weight: draft.weight, role: draft.role,
+      showInCompact: draft.showInCompact ?? true, createdAt: t, updatedAt: t,
     })
     return id
   })
@@ -66,12 +67,12 @@ export async function updateActivityType(profileId: string, id: string, draft: A
     if (hasDuplicateName(draft.name, siblings, id)) throw new Error(dupMsg(draft.name))
     await db.activityTypes.put({
       ...cur, name: draft.name.trim(), enabled: draft.enabled, weight: draft.weight, role: draft.role,
-      updatedAt: Date.now(),
+      showInCompact: draft.showInCompact ?? cur.showInCompact, updatedAt: Date.now(),
     })
   })
 }
 
-/** Permanently removes the activity and every record of it. Disabling keeps the records. */
+/** Permanently removes the activity and every record of it. Archiving (enabled = false) keeps the records. */
 export async function deleteActivityType(profileId: string, id: string): Promise<void> {
   await rw(async () => {
     await ownedType(profileId, id)
@@ -115,30 +116,52 @@ async function findRecord(chapterId: string, typeId: string): Promise<ActivityRe
   return rows.sort((a, b) => b.updatedAt - a.updatedAt)[0]
 }
 
+/** Everything needed to undo one change exactly. */
+export interface ActivityChange {
+  chapterId: string
+  typeId: string
+  recordId: string
+  previous: ActivityRecord | null // null = there was no record before
+  writtenAt: number
+}
+
 /**
- * Changes ONE activity of ONE chapter. Nothing else is touched.
- * Every change is appended to that record's history; unticking keeps notes and history.
+ * Changes ONE activity of ONE chapter. Nothing else is touched. Saved in one transaction, so
+ * repeated or concurrent taps cannot create duplicate records. Returns null if nothing changed.
  */
 export async function setActivityStatus(
   profileId: string, chapterId: string, typeId: string, status: ActivityStatus,
-): Promise<void> {
+): Promise<ActivityChange | null> {
   if (!ACTIVITY_STATUSES.includes(status)) throw new Error('Unknown status.')
-  await rw(async () => {
+  return rw(async () => {
     const chapter = await ownedChapter(profileId, chapterId)
     const type = await ownedType(profileId, typeId)
     if (type.subjectId !== chapter.subjectId) throw new Error('That activity is not part of this chapter’s subject.')
     const existing = await findRecord(chapterId, typeId)
     const from: ActivityStatus = existing?.status ?? 'todo'
-    if (from === status) return
-    const now = Date.now()
+    if (from === status) return null
+    const now = Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1) // strictly increasing per record
+    const id = existing?.id ?? recordId(chapterId, typeId)
     await db.activityRecords.put({
-      id: existing?.id ?? recordId(chapterId, typeId),
-      profileId, chapterId, activityTypeId: typeId, status,
+      id, profileId, chapterId, activityTypeId: typeId, status,
       completedAt: status === 'done' ? now : null,
       notes: existing?.notes ?? '', source: existing?.source ?? '',
       estimatedMinutes: existing?.estimatedMinutes ?? null, actualMinutes: existing?.actualMinutes ?? null,
       history: appendHistory(existing?.history ?? [], { at: now, from, to: status }),
       createdAt: existing?.createdAt ?? now, updatedAt: now,
     })
+    return { chapterId, typeId, recordId: id, previous: existing ?? null, writtenAt: now }
   })
-                                                                      }
+}
+
+/** Restores the exact previous record, but only if nothing has changed it since. Returns false if skipped. */
+export async function undoActivityChange(profileId: string, change: ActivityChange): Promise<boolean> {
+  return rw(async () => {
+    await ownedChapter(profileId, change.chapterId)
+    const current = await findRecord(change.chapterId, change.typeId)
+    if (!current || current.id !== change.recordId || current.updatedAt !== change.writtenAt) return false
+    if (change.previous) await db.activityRecords.put(change.previous)
+    else await db.activityRecords.delete(current.id)
+    return true
+  })
+    }
