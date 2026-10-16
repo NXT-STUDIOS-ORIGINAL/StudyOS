@@ -3,6 +3,7 @@ import type { Profile } from '../domain/types'
 import type { Chapter, Subject, Topic } from '../domain/syllabus/types'
 import { recordId, type ActivityRecord, type ActivityType } from '../domain/activity/types'
 import { buildActivityTypes } from '../domain/activity/defaults'
+import { COMPACT_DEFAULT_NAMES, DEFAULT_ACTIVITY_NAMES } from '../domain/activity/defaults'
 
 /**
  * v4: seeds the default activity set for every profile and subject, and converts the old
@@ -61,4 +62,16 @@ export async function migrateToActivities(tx: Transaction): Promise<void> {
     }
   }
   if (rows.length > 0) await recordsTable.bulkAdd(rows)
+}
+
+/**
+ * v5: gives existing activities a "show on card" value. The ten built-in names follow the
+ * default card set; any activity you created yourself stays visible on the card.
+ */
+export async function migrateCompactDefaults(tx: Transaction): Promise<void> {
+  await tx.table('activityTypes').toCollection().modify((t: { name: string; showInCompact?: boolean }) => {
+    if (t.showInCompact === undefined) {
+      t.showInCompact = !DEFAULT_ACTIVITY_NAMES.has(t.name) || COMPACT_DEFAULT_NAMES.has(t.name)
+    }
+  })
 }
