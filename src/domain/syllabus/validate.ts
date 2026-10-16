@@ -19,14 +19,14 @@ function common(row: Record<string, unknown>, ownerId: string): string[] {
 export function validateSubjectRecord(row: unknown, ownerId: string): string[] {
   if (!isRecord(row)) return ['record is not an object']
   const e = common(row, ownerId)
-  if (!isStr(row.color) || !isHexColor(row.color)) e.push('color must be a hex colour')
+  if (!(row.pinned === undefined || typeof row.pinned === 'boolean')) e.push('pinned must be true or false')
   return e
 }
 
 export function validateChapterRecord(row: unknown, ownerId: string): string[] {
   if (!isRecord(row)) return ['record is not an object']
   const e = common(row, ownerId)
-  if (!isStr(row.subjectId) || row.subjectId.length === 0) e.push('subjectId is missing')
+  if (!(row.pinned === undefined || typeof row.pinned === 'boolean')) e.push('pinned must be true or false')
   if (!optNum(row.weight, (n) => n > 0 && n <= 1000)) e.push('weight must be above 0 or null')
   if (!optNum(row.estimatedMinutes, int(0, 600000))) e.push('estimatedMinutes must be a whole number or null')
   if (!(row.targetDate === null || (isStr(row.targetDate) && isValidDateString(row.targetDate)))) e.push('targetDate must be a valid date or null')
