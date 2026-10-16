@@ -115,7 +115,8 @@ describe('restore', () => {
     it('adds missing records and recognises identical ones', async () => {
       const a = await createProfile(draft('A'))
       const backup = roundTrip(await buildBackup({ kind: 'profile', id: a }))
-      expect((await restoreBackup(backup, mergePlan(a, 'keep-existing'))).rowsIdentical).toBe(1)
+      const total = Object.values(backup.profiles[0].tables).reduce((n, rows) => n + rows.length, 0)
+      expect((await restoreBackup(backup, mergePlan(a, 'keep-existing'))).rowsIdentical).toBe(total)
       await db.profileSettings.delete(a)
       expect((await restoreBackup(backup, mergePlan(a, 'keep-existing'))).rowsAdded).toBe(1)
       expect(await db.profileSettings.count()).toBe(1)
