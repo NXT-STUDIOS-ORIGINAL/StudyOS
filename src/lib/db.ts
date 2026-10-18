@@ -3,6 +3,7 @@ import type { Profile, ProfileDraft, ProfileSettings, SettingsDraft } from '../d
 import type { Chapter, Subject, Topic } from '../domain/syllabus/types'
 import type { ActivityRecord, ActivityType } from '../domain/activity/types'
 import type { TrackerPrefs } from '../domain/tracker/tracker'
+import type { Task } from '../domain/tasks/types'
 import { buildActivityTypes } from '../domain/activity/defaults'
 import { DEFAULT_SETTINGS } from '../domain/settings'
 import { legacyToProfile, type LegacySettings } from '../domain/migration'
@@ -18,7 +19,14 @@ export const ACTIVE_KEY = 'activeProfileId'
  * Parents come before children.
  */
 export const PROFILE_OWNED_TABLES = [
-  'profileSettings', 'subjects', 'activityTypes', 'chapters', 'topics', 'activityRecords', 'trackerPrefs',
+  'profileSettings',
+  'subjects',
+  'activityTypes',
+  'chapters',
+  'topics',
+  'activityRecords',
+  'trackerPrefs',
+  'tasks',
 ] as const
 
 export class StudyOSDB extends Dexie {
@@ -32,6 +40,7 @@ export class StudyOSDB extends Dexie {
   activityTypes!: Table<ActivityType, string>
   activityRecords!: Table<ActivityRecord, string>
   trackerPrefs!: Table<TrackerPrefs, string>
+  tasks!: Table<Task, string>
 
   constructor() {
     super('studyos')
@@ -65,6 +74,10 @@ export class StudyOSDB extends Dexie {
     this.version(5)
       .stores({ trackerPrefs: 'profileId' })
       .upgrade(migrateCompactDefaults)
+    // v6: tasks (additive, no data changes)
+    this.version(6).stores({
+      tasks: 'id, profileId, subjectId, chapterId, dueDate, status',
+    })
   }
 }
 
