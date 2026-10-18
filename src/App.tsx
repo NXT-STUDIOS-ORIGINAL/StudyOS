@@ -10,6 +10,7 @@ import { Onboarding } from './pages/Onboarding'
 import { ComingSoon } from './pages/ComingSoon'
 import { BackupPage } from './pages/BackupPage'
 import { SyllabusPage } from './pages/Syllabus'
+import { PlannerPage } from './pages/Planner'
 
 function useApplyTheme(theme: ThemeChoice) {
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function App() {
         <Route element={<AppShell key={active.id} profiles={profiles} active={active} />}>
           <Route index element={<Dashboard profile={active} settings={settings} />} />
           <Route path="syllabus" element={<SyllabusPage profile={active} />} />
-          <Route path="planner" element={<ComingSoon title="Planner" phase={2} />} />
+          <Route path="planner" element={<PlannerPage profile={active} settings={settings} />} />
           <Route path="focus" element={<ComingSoon title="Focus timer" phase={2} />} />
           <Route path="exams" element={<ComingSoon title="Exams" phase={3} />} />
           <Route path="analytics" element={<ComingSoon title="Analytics" phase={4} />} />
