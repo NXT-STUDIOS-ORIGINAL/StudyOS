@@ -4,6 +4,7 @@ import { validateSettings } from '../settings'
 import { validateChapterRecord, validateSubjectRecord, validateTopicRecord } from '../syllabus/validate'
 import { validateActivityRecord, validateActivityTypeRecord } from '../activity/validate'
 import { validateTrackerPrefsRecord } from '../tracker/tracker'
+import { validateTaskRecord } from '../tasks/rules'
 
 export const BACKUP_FORMAT = 'studyos-backup'
 export const BACKUP_SCHEMA_VERSION = 1
@@ -107,6 +108,13 @@ export const BACKUP_TABLES: BackupTableSpec[] = [
     name: 'trackerPrefs', pk: 'profileId', label: 'tracker preference',
     refs: [{ field: 'defaultSubjectId', table: 'subjects', soft: true }, { field: 'lastSubjectId', table: 'subjects', soft: true }],
     validateRow: validateTrackerPrefsRecord,
+  },
+  {
+    name: 'tasks', pk: 'id', label: 'task',
+    refs: [{ field: 'subjectId', table: 'subjects' }, { field: 'chapterId', table: 'chapters' }],
+    validateRow: validateTaskRecord,
+  },
+]
   },
 ]
 
