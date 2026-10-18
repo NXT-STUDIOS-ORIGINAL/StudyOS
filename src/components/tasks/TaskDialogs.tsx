@@ -29,8 +29,10 @@ interface Props {
 export function TaskDialogs(p: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const edit = p.dlg?.kind === 'edit' ? p.tasks.find((t) => t.id === p.dlg.id) : undefined
-  const del = p.dlg?.kind === 'delete' ? p.tasks.find((t) => t.id === p.dlg.id) : undefined
+  const editId = p.dlg?.kind === 'edit' ? p.dlg.id : null
+  const delId = p.dlg?.kind === 'delete' ? p.dlg.id : null
+  const edit = editId === null ? undefined : p.tasks.find((t) => t.id === editId)
+  const del = delId === null ? undefined : p.tasks.find((t) => t.id === delId)
 
   function close() {
     setError(null)
