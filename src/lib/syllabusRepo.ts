@@ -13,7 +13,7 @@ export type SyllabusKind = 'subject' | 'chapter' | 'topic'
 function rw<T>(fn: () => Promise<T>): Promise<T> {
   return db.transaction(
     'rw',
-    [db.profiles, db.subjects, db.chapters, db.topics, db.activityTypes, db.activityRecords],
+    [db.profiles, db.subjects, db.chapters, db.topics, db.activityTypes, db.activityRecords, db.tasks],
     fn,
   )
 }
@@ -82,6 +82,7 @@ export async function deleteSubject(profileId: string, id: string): Promise<void
     await db.topics.where('chapterId').anyOf(chapterIds).delete()
     await db.chapters.bulkDelete(chapterIds)
     await db.activityTypes.where('subjectId').equals(id).delete()
+    await db.tasks.where('subjectId').equals(id).modify({ subjectId: null, chapterId: null })
     await db.subjects.delete(id)
   })
 }
@@ -122,6 +123,7 @@ export async function deleteChapter(profileId: string, id: string): Promise<void
   await rw(async () => {
     await ownedChapter(profileId, id)
     await db.activityRecords.where('chapterId').equals(id).delete()
+    await db.tasks.where('chapterId').equals(id).modify({ chapterId: null })
     await db.topics.where('chapterId').equals(id).delete()
     await db.chapters.delete(id)
   })
